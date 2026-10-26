@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BekalGo - Pre-Order & Grab & Go Bekal Sekolah Terjadwal Sidoarjo</title>
+  <meta name="description" content="Platform agregator pre-order sarapan dan bekal sekolah H-1 dengan sistem Grab & Go tanpa antre, keranjang multi-tenant, dan dompet internal BekalPay di Sidoarjo.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍱</text></svg>">
+</head>
+<body>
+
+  <!-- QUICK ROLE SWITCHER TOPBAR (Membantu Pengujian & Demonstrasi 3 Peran Berbeda) -->
+  <aside class="role-quick-bar" id="role-quick-bar">
+    <div class="brand-badge">
+      <div class="dot"></div>
+      <span>BekalGo Ecosystem</span>
+      <span style="opacity: 0.6; font-size: 0.75rem;">| Sidoarjo Pilot Project</span>
+    </div>
+
+    <div class="role-buttons-group">
+      <span style="font-size: 0.78rem; opacity: 0.8; margin-right: 4px;">Pilih Peran:</span>
+      <button class="role-btn active" id="btn-role-user" onclick="window.switchRole('user')">
+        <span>👨‍👩‍👧</span> Orang Tua (User)
+      </button>
+      <button class="role-btn" id="btn-role-mitra" onclick="window.switchRole('mitra')">
+        <span>🏪</span> Mitra Gerai (Tenant)
+      </button>
+      <button class="role-btn" id="btn-role-admin" onclick="window.switchRole('super_admin')">
+        <span>⚡</span> Super Admin
+      </button>
+    </div>
+
+    <!-- Simulasi Jam Operasional (Membuktikan Cron Cut-off 21:00 & Grab & Go 06:00-08:30) -->
+    <div class="clock-simulation-badge">
+      <span>⏰ Jam Sistem:</span>
+      <strong id="virtual-clock-text">16:30 WIB</strong>
+      <button class="clock-toggle-btn" id="btn-toggle-clock" onclick="window.cycleClockMode()" title="Klik untuk simulasi waktu sebelum/setelah cut-off 21:00">
+        Ubah Simulasi ⟳
+      </button>
+    </div>
+  </aside>
+
+  <!-- CUT-OFF ORDER H-1 ALERT STRIP -->
+  <div class="cutoff-alert-strip is-open" id="cutoff-banner">
+    <span>📢 <strong>Sistem Cut-Off H-1:</strong> Pemesanan bekal untuk besok dibuka hingga pukul 21:00 WIB.</span>
+    <span class="cutoff-timer-highlight" id="countdown-timer">Sisa Waktu: 04j 29m 12d</span>
+  </div>
+
+  <!-- MAIN HEADER NAVIGATION -->
+  <header class="main-header">
+    <div class="header-container">
+      <div class="logo-area" onclick="window.navigateTab('home')">
+        <div class="logo-icon">🍱</div>
+        <div class="logo-text">
+          <h1>Bekal<span>Go</span></h1>
+          <p>Pre-Order & Grab & Go Sidoarjo</p>
+        </div>
+      </div>
+
+      <!-- Navigation tabs injected based on role -->
+      <nav class="role-nav-tabs" id="main-nav-tabs">
+        <!-- Dynamically filled by app.js -->
+      </nav>
+
+      <!-- User Action Badges (Wallet, Cart, Profile) -->
+      <div class="header-actions" id="header-actions">
+        <!-- Dynamically updated by app.js -->
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="main-content" id="app-view-container">
+    <!-- View content rendered via js/app.js -->
+  </main>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. MULTI-TENANT CART & CHECKOUT MODAL -->
+  <div class="modal-backdrop" id="modal-cart">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🛒 Keranjang Multi-Tenant BekalGo</h3>
+        <button class="modal-close-btn" onclick="window.closeModal('modal-cart')">&times;</button>
+      </div>
+      <div class="modal-body" id="cart-modal-body">
+        <!-- Injected via renderCartModal() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. WALLET TOP-UP MODAL (MIN. Rp 50.000 SESUAI BLUEPRINT) -->
+  <div class="modal-backdrop" id="modal-topup">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>💳 Isi Saldo BekalPay</h3>
+        <button class="modal-close-btn" onclick="window.closeModal('modal-topup')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--slate-600); margin-bottom: 16px;">
+          Dompet internal menekan biaya admin payment gateway. Minimal top-up <strong>Rp 50.000</strong>.
+        </p>
+
+        <div class="form-group">
+          <label>Pilih Nominal Top-Up:</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <button class="cat-pill active" onclick="window.setTopupAmount(50000)">Rp 50.000</button>
+            <button class="cat-pill" onclick="window.setTopupAmount(100000)">Rp 100.000</button>
+            <button class="cat-pill" onclick="window.setTopupAmount(200000)">Rp 200.000</button>
+            <button class="cat-pill" onclick="window.setTopupAmount(500000)">Rp 500.000</button>
+          </div>
+          <input type="number" id="custom-topup-input" class="form-control" value="50000" min="50000" step="10000" placeholder="Nominal lain (min Rp 50.000)">
+        </div>
+
+        <div class="form-group">
+          <label>Metode Pembayaran Instan:</label>
+          <select id="topup-method-select" class="form-control">
+            <option value="QRIS Instan (BCA, Mandiri, GoPay, OVO, ShopeePay)">QRIS Instan (Tanpa Biaya Admin)</option>
+            <option value="Virtual Account BCA">Virtual Account BCA</option>
+            <option value="Virtual Account Bank Mandiri">Virtual Account Bank Mandiri</option>
+            <option value="Virtual Account Bank BRI">Virtual Account Bank BRI</option>
+          </select>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: var(--radius-md); font-size: 0.82rem; color: #166534; margin-top: 10px;">
+          ✓ Saldo langsung aktif seketika setelah konfirmasi untuk pemesanan H-1 bekal sekolah ananda.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-table-action btn-table-edit" onclick="window.closeModal('modal-topup')">Batal</button>
+        <button class="btn-add-tenant" onclick="window.confirmTopup()">Konfirmasi & Bayar Sekarang</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. SUPER ADMIN: TAMBAH MITRA GERAI MODAL (EXPLICIT USER REQUIREMENT) -->
+  <div class="modal-backdrop" id="modal-add-tenant">
+    <div class="modal-content" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3>🏪 Pendaftaran Mitra Gerai Baru (Super Admin)</h3>
+        <button class="modal-close-btn" onclick="window.closeModal('modal-add-tenant')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-add-tenant" onsubmit="window.submitAddTenant(event)">
+          <div class="form-group">
+            <label for="tenant-name">Nama Gerai UMKM *</label>
+            <input type="text" id="tenant-name" class="form-control" placeholder="Contoh: Soto Ayam Lamongan Cak Har" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tenant-owner">Nama Pemilik *</label>
+              <input type="text" id="tenant-owner" class="form-control" placeholder="Contoh: Bapak Hartono" required>
+            </div>
+            <div class="form-group">
+              <label for="tenant-phone">Nomor WhatsApp *</label>
+              <input type="text" id="tenant-phone" class="form-control" placeholder="Contoh: 0812-3344-5566" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="tenant-location">Alamat Lengkap Gerai di Sidoarjo *</label>
+            <input type="text" id="tenant-location" class="form-control" placeholder="Contoh: Jl. Pahlawan No. 15, Sidoarjo" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tenant-route">Rute Sekolah Utama *</label>
+              <select id="tenant-route" class="form-control" required>
+                <option value="Rute Pucang - GOR Sidoarjo">Rute Pucang - GOR Sidoarjo</option>
+                <option value="Rute Al-Falah Deltasari - Waru">Rute Al-Falah Deltasari - Waru</option>
+                <option value="Rute Sepanjang - Sedati">Rute Sepanjang - Sedati</option>
+                <option value="Rute Candi - Tanggulangin">Rute Candi - Tanggulangin</option>
+                <option value="Rute Sukodono - Gedangan">Rute Sukodono - Gedangan</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="tenant-commission">Komisi Platform (%) *</label>
+              <input type="number" id="tenant-commission" class="form-control" value="3.5" min="1" max="10" step="0.5" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="tenant-pickup-point">Area Rak Grab & Go Khusus *</label>
+            <input type="text" id="tenant-pickup-point" class="form-control" placeholder="Contoh: Rak Kayu C - Teras Samping Gerai" required>
+          </div>
+
+          <div class="form-group">
+            <label for="tenant-desc">Deskripsi & Spesialisasi Menu</label>
+            <textarea id="tenant-desc" class="form-control" rows="2" placeholder="Menu sarapan bergizi, porsi ramah anak sekolah..."></textarea>
+          </div>
+
+          <div class="modal-footer" style="padding-left: 0; padding-right: 0; padding-bottom: 0;">
+            <button type="button" class="btn-table-action btn-table-edit" onclick="window.closeModal('modal-add-tenant')">Batal</button>
+            <button type="submit" class="btn-add-tenant">Simpan & Daftarkan Mitra</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. SUPER ADMIN: KONFIRMASI HAPUS MITRA GERAI MODAL -->
+  <div class="modal-backdrop" id="modal-delete-tenant">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 style="color: var(--danger);">⚠️ Konfirmasi Hapus Mitra Gerai</h3>
+        <button class="modal-close-btn" onclick="window.closeModal('modal-delete-tenant')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.92rem; color: var(--slate-700); margin-bottom: 12px;">
+          Apakah Anda yakin ingin menghapus mitra gerai <strong id="delete-tenant-name-span"></strong> dari sistem BekalGo?
+        </p>
+        <div style="background: var(--danger-light); color: var(--danger); padding: 12px; border-radius: var(--radius-md); font-size: 0.8rem; line-height: 1.4;">
+          Tindakan ini akan menonaktifkan gerai, menghapus seluruh katalog menunya, dan membatalkan pesanan yang belum diproses.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-table-action btn-table-edit" onclick="window.closeModal('modal-delete-tenant')">Batal</button>
+        <button class="btn-table-action btn-table-delete" id="btn-confirm-delete-tenant" style="padding: 10px 18px; font-weight: 700;">Hapus Mitra Sekarang</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. MITRA GERAI: CETAK LABEL STIKER PENGAMBILAN & REKAP FISIK -->
+  <div class="modal-backdrop" id="modal-print-label">
+    <div class="modal-content" style="max-width: 540px;">
+      <div class="modal-header no-print">
+        <h3>🖨️ Label Stiker Grab & Go (Siap Tempel)</h3>
+        <button class="modal-close-btn" onclick="window.closeModal('modal-print-label')">&times;</button>
+      </div>
+      <div class="modal-body print-label-area" id="print-label-body">
+        <!-- Injected via renderPrintLabel() -->
+      </div>
+      <div class="modal-footer no-print">
+        <button class="btn-table-action btn-table-edit" onclick="window.closeModal('modal-print-label')">Tutup</button>
+        <button class="btn-add-tenant" onclick="window.print()"><span style="font-size: 1rem;">🖨️</span> Cetak Label (Print)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. MITRA GERAI: TAMBAH MENU PRODUK MODAL -->
+  <div class="modal-backdrop" id="modal-add-product">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>🍱 Tambah Menu Bekal Baru</h3>
+        <button class="modal-close-btn" onclick="window.closeModal('modal-add-product')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-add-product" onsubmit="window.submitAddProduct(event)">
+          <div class="form-group">
+            <label for="prod-name">Nama Menu Makanan/Minuman *</label>
+            <input type="text" id="prod-name" class="form-control" placeholder="Contoh: Nasi Goreng Kampung Telur Ceplok" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="prod-price">Harga (Rp) *</label>
+              <input type="number" id="prod-price" class="form-control" placeholder="15000" min="1000" step="500" required>
+            </div>
+            <div class="form-group">
+              <label for="prod-category">Kategori *</label>
+              <select id="prod-category" class="form-control" required>
+                <option value="Nasi & Lauk">Nasi & Lauk</option>
+                <option value="Bento Anak">Bento Anak</option>
+                <option value="Roti & Susu">Roti & Susu</option>
+                <option value="Bubur & Tradisional">Bubur & Tradisional</option>
+                <option value="Minuman Sehat">Minuman Sehat</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="prod-calories">Estimasi Kalori</label>
+              <input type="text" id="prod-calories" class="form-control" placeholder="Contoh: 420 kkal">
+            </div>
+            <div class="form-group">
+              <label for="prod-quota">Kuota Porsi / Hari</label>
+              <input type="number" id="prod-quota" class="form-control" value="30" min="5">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="prod-desc">Deskripsi & Komposisi</label>
+            <textarea id="prod-desc" class="form-control" rows="2" placeholder="Komposisi gizi, bahan segar, tidak pedas..."></textarea>
+          </div>
+          <div class="modal-footer" style="padding-left: 0; padding-right: 0; padding-bottom: 0;">
+            <button type="button" class="btn-table-action btn-table-edit" onclick="window.closeModal('modal-add-product')">Batal</button>
+            <button type="submit" class="btn-add-tenant">Simpan Menu</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ES6 APP MODULE ENTRY -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
